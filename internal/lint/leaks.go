@@ -11,7 +11,9 @@ import (
 
 // fieldLeaks finds fields that code outside their struct works on, when the
 // struct otherwise guards its fields: it has methods that work on them, and
-// some field that nothing outside knows.
+// some field that nothing outside knows. Generated methods, such as the
+// DeepCopy methods of Kubernetes API types, do not count: a struct whose only
+// methods a tool wrote is plain data, meant to be worked on by its users.
 //
 // The struct is its methods, its constructors, the types of its package that
 // embed it, and whatever it is tangled with; everything else is outside,
@@ -28,7 +30,7 @@ func fieldLeaks(m *model.Model, t *tangles) []Finding {
 		}
 		owner := r.Field.Thing
 		if r.User == owner || slices.Contains(r.User.Embeds, owner) || t.same(r.User, owner) {
-			if r.UserFunc != nil && r.UserFunc.Method && r.UserFunc.Thing == owner {
+			if r.UserFunc != nil && r.UserFunc.Method && r.UserFunc.Thing == owner && !r.UserFunc.Generated {
 				working[owner] = true
 			}
 			continue

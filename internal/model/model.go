@@ -80,6 +80,7 @@ type Func struct {
 	Abstract  bool // declared by an interface: it has no body
 	Satisfies bool // implements a method of some interface, so it may be called through it
 	Wrapper   bool // only forwards a call, or gets or sets a field
+	Generated bool // declared in a file a tool generated, such as a DeepCopy method
 	Variadic  bool
 	Params    []*Param
 

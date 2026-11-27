@@ -18,3 +18,8 @@ func Title(q *queue.RunQueue) string {
 func Peek(q *queue.RunQueue) int {
 	return q.Buffer()[0]
 }
+
+func Finish(j *queue.Job) {
+	j.Status.Done = append(j.Status.Done, j.Spec.Tasks...)
+	j.Spec.Tasks = nil
+}

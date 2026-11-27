@@ -20,19 +20,22 @@ type builder struct {
 	// How each parameter is used in its function's body.
 	passed map[*Param]int // passed as it is to a function of the loaded packages
 	used   map[*Param]int // any other use
+
+	generated map[string]bool // the files a tool generated, by name
 }
 
 func build(fset *token.FileSet, pkgs []*packages.Package, inScope map[string]bool) *Model {
 	b := &builder{
-		fset:   fset,
-		m:      &Model{},
-		things: map[types.Object]*Thing{},
-		funcs:  map[*types.Func]*Func{},
-		fields: map[*types.Var]*Field{},
-		params: map[*types.Var]*Param{},
-		types:  map[*Thing]*types.Named{},
-		passed: map[*Param]int{},
-		used:   map[*Param]int{},
+		fset:      fset,
+		m:         &Model{},
+		things:    map[types.Object]*Thing{},
+		funcs:     map[*types.Func]*Func{},
+		fields:    map[*types.Var]*Field{},
+		params:    map[*types.Var]*Param{},
+		types:     map[*Thing]*types.Named{},
+		passed:    map[*Param]int{},
+		generated: map[string]bool{},
+		used:      map[*Param]int{},
 	}
 	own := make([]*Package, len(pkgs))
 	for i, p := range pkgs {
@@ -41,6 +44,13 @@ func build(fset *token.FileSet, pkgs []*packages.Package, inScope map[string]boo
 			own[i].Pos = fset.Position(p.Syntax[0].Package)
 		}
 		b.m.Packages = append(b.m.Packages, own[i])
+	}
+	for _, p := range pkgs {
+		for _, file := range p.Syntax {
+			if ast.IsGenerated(file) {
+				b.generated[fset.Position(file.Package).Filename] = true
+			}
+		}
 	}
 	for i, p := range pkgs {
 		b.declare(p, own[i])
@@ -80,6 +90,7 @@ func (b *builder) newFunc(fn *types.Func, owner *Thing) *Func {
 		Method:   sig.Recv() != nil,
 		Variadic: sig.Variadic(),
 	}
+	f.Generated = b.generated[f.Pos.Filename]
 	for i := range sig.Params().Len() {
 		v := sig.Params().At(i)
 		p := &Param{Name: v.Name(), Func: f, Index: i, Context: isContext(v.Type())}
